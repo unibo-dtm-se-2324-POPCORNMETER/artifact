@@ -1,5 +1,5 @@
 import unittest
-from my_project import MyClass
+from artifact import MyClass
 
 
 class TestMyClass(unittest.TestCase):
