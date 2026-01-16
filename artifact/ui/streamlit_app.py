@@ -5,6 +5,7 @@ import streamlit as st
 # ----------------------------
 
 st.set_page_config(page_title="Popcorn Meter", page_icon="🍿", layout="wide")
+st.write(" Streamlit UI is working")
 
 # Netflix-ish dark theme + tiles
 st.markdown(
