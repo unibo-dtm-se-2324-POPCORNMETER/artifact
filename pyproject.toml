@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "template-python-project-poetry"
 packages = [
-    { include = "artifact" },
+    { include = "popcorn_meter" },
 ]
 version = "2.4.0"
 description = "A template for Python projects, using Poetry"
