@@ -2,10 +2,10 @@ import logging
 
 
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('artifact')
+logger = logging.getLogger('popcorn_meter')
 
 # this is the initial module of your app
-# this is executed whenever some client-code is calling `import artifact` or `from artifact import ...`
+# this is executed whenever some client-code is calling `import popcorn_meter` or `from artifact import ...`
 # put your main classes here, eg:
 class MyClass:
     def my_method(self):
