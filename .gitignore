@@ -142,3 +142,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# SQLite database (project runtime data)
+data/
+*.db
+

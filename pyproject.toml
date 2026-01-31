@@ -25,11 +25,11 @@ test = "python -m unittest discover -v -s tests -p '*.py'"
 coverage = "coverage run -m unittest discover -v -s tests -p '*.py'"
 coverage-report = "coverage report -m"
 coverage-html = "coverage html"
-mypy = "mypy artifact tests"
-compile = "python -m compileall artifact tests"
+mypy = "mypy popcorn_meter tests"
+compile = "python -m compileall popcorn_meter tests"
 
 [tool.poetry.scripts]
-artifact = "artifact:main"
+artifact = "popcorn_meter.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]
