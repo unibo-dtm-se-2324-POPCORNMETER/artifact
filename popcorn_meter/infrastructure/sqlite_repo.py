@@ -6,14 +6,16 @@ from typing import Iterable, Optional
 class SqliteRepo:
     """
     Very small SQLite repository for:
-    - users (username+password)
+    - users (username + email + password)   [plain password, as requested]
     - preferences (favorite genres)
     - watchlist
     - watched
     """
 
-    def __init__(self, db_path: str | Path = "popcorn_meter.db") -> None:
+    def __init__(self, db_path: str | Path = "data/popcorn_meter.db") -> None:
         self.db_path = str(db_path)
+        # Make sure parent folder exists (e.g., data/)
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _connect(self) -> sqlite3.Connection:
@@ -27,7 +29,8 @@ class SqliteRepo:
                 """
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
+                    username TEXT NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL
                 );
 
@@ -55,37 +58,50 @@ class SqliteRepo:
             )
 
     # ---------- Users ----------
-    def create_user(self, username: str, password: str) -> bool:
+    def create_user(self, username: str, email: str, password: str) -> bool:
         username = username.strip()
-        if not username or not password:
+        email = email.strip().lower()
+
+        if not username or not email or not password:
             return False
+
         try:
             with self._connect() as conn:
                 conn.execute(
-                    "INSERT INTO users(username, password) VALUES (?, ?)",
-                    (username, password),
+                    "INSERT INTO users(username, email, password) VALUES (?, ?, ?)",
+                    (username, email, password),
                 )
             return True
         except sqlite3.IntegrityError:
+            # email already exists (UNIQUE) or other constraint issue
             return False
 
-    def verify_login(self, username: str, password: str) -> bool:
+    def verify_login(self, email: str, password: str) -> bool:
+        email = email.strip().lower()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT password FROM users WHERE username = ?",
-                (username.strip(),),
+                "SELECT password FROM users WHERE email = ?",
+                (email,),
             ).fetchone()
-        if row is None:
-            return False
-        return row[0] == password
+        return (row is not None) and (row[0] == password)
 
-    def get_user_id(self, username: str) -> Optional[int]:
+    def get_user_id_by_email(self, email: str) -> Optional[int]:
+        email = email.strip().lower()
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT id FROM users WHERE username = ?",
-                (username.strip(),),
+                "SELECT id FROM users WHERE email = ?",
+                (email,),
             ).fetchone()
         return None if row is None else int(row[0])
+
+    def get_username_by_email(self, email: str) -> Optional[str]:
+        email = email.strip().lower()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT username FROM users WHERE email = ?",
+                (email,),
+            ).fetchone()
+        return None if row is None else str(row[0])
 
     # ---------- Preferences ----------
     def set_favorite_genres(self, user_id: int, genres: Iterable[str]) -> None:

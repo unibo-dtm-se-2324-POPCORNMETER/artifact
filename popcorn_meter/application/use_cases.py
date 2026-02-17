@@ -26,16 +26,22 @@ class AppService:
         self.repo = repo
 
     # --- Auth ---
-    def sign_up(self, username: str, password: str) -> bool:
-        return self.repo.create_user(username, password)
+    def sign_up(self, username: str, email: str, password: str) -> bool:
+        return self.repo.create_user(username, email, password)
 
-    def login(self, username: str, password: str) -> SessionUser | None:
-        ok = self.repo.verify_login(username, password)
+    def login(self, email: str, password: str) -> SessionUser | None:
+        ok = self.repo.verify_login(email, password)
         if not ok:
             return None
-        uid = self.repo.get_user_id(username)
+
+        uid = self.repo.get_user_id_by_email(email)
         if uid is None:
             return None
+
+        username = self.repo.get_username_by_email(email)
+        if username is None:
+            return None
+
         return SessionUser(username=username.strip(), user_id=uid)
 
     # --- Preferences ---
@@ -73,7 +79,7 @@ class AppService:
         fav = set(self.get_genres(user_id))
         watched = set(self.list_watched(user_id))
 
-        # Demo catalog until OMDb integration (your teammate will replace with real movies)
+        # Demo catalog until OMDb integration
         demo_catalog = [
             ("Inception", "Sci-Fi"),
             ("Interstellar", "Sci-Fi"),
@@ -92,5 +98,4 @@ class AppService:
         if not fav:
             return []
 
-        recs = [t for (t, g) in demo_catalog if g in fav and t not in watched]
-        return recs
+        return [t for (t, g) in demo_catalog if g in fav and t not in watched]
