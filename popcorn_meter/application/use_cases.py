@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
+from popcorn_meter.infrastructure.omdb_client import OmdbClient
 
 
 ALL_GENRES = [
