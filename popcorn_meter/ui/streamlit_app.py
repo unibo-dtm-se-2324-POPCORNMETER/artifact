@@ -1,5 +1,7 @@
 import streamlit as st
 
+
+from popcorn_meter.infrastructure.omdb_client import OmdbClient
 from popcorn_meter.application.use_cases import AppService, ALL_GENRES
 from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
 
@@ -98,6 +100,7 @@ def movie_card(title: str, meta: str = ""):
 # Repo + app service
 repo = SqliteRepo("popcorn_meter.db")
 app = AppService(repo)
+omdb = OmdbClient()
 
 # Session
 if "session_user" not in st.session_state:
@@ -153,6 +156,24 @@ if page == "Home":
     st.subheader("Search & Add (Phase 1: title-only)")
     st.caption("Your teammate will integrate OMDb here to show posters/details.")
     q = st.text_input("Movie title", placeholder="Try: Inception, Titanic, The Matrix")
+
+#adding the button for OMDb test    
+    if st.button("🔎 Fetch OMDb details", use_container_width=True):
+        try:
+            details = app.fetch_movie_details(q)
+            if details.get("Response") == "False":
+                st.error(details.get("Error", "Movie not found"))
+            else:
+                st.success(f"{details.get('Title')} ({details.get('Year')})")
+                st.write(details.get("Genre"))
+                st.write(details.get("Plot"))
+                poster = details.get("Poster")
+                if poster and poster != "N/A":
+                    st.image(poster, width=220)
+                st.json(details)
+        except Exception as e:
+            st.error(str(e))
+
 
     if st.session_state.session_user is None:
         st.info("Login to save watchlist to the database.")

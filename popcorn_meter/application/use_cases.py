@@ -22,8 +22,9 @@ class AppService:
     Streamlit UI should call ONLY this layer (not raw SQL).
     """
 
-    def __init__(self, repo: SqliteRepo) -> None:
+    def __init__(self, repo: SqliteRepo,omdb: OmdbClient) -> None:
         self.repo = repo
+        self.omdb= omdb
 
     # --- Auth ---
     def sign_up(self, username: str, password: str) -> bool:
@@ -94,3 +95,6 @@ class AppService:
 
         recs = [t for (t, g) in demo_catalog if g in fav and t not in watched]
         return recs
+    
+    def fetch_movie_details(self, title: str) -> dict:
+        return self.omdb.search_by_title(title)
