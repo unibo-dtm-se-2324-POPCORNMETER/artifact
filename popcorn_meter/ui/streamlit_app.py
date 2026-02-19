@@ -1,8 +1,9 @@
 import streamlit as st
 
-from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
-from popcorn_meter.application.use_cases import AppService, ALL_GENRES
 
+from popcorn_meter.infrastructure.omdb_client import OmdbClient
+from popcorn_meter.application.use_cases import AppService, ALL_GENRES
+from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
 
 # ----------------------------
 # App setup
@@ -112,12 +113,11 @@ def movie_tile(title: str, meta: str = "") -> None:
         unsafe_allow_html=True,
     )
 
+# Repo + app service
+repo = SqliteRepo("popcorn_meter.db")
+omdb = OmdbClient()
+app = AppService(repo,omdb)
 
-# ----------------------------
-# Services (DB + use cases)
-# ----------------------------
-repo = SqliteRepo("data/popcorn_meter.db")
-app = AppService(repo)
 
 
 # ----------------------------
@@ -179,12 +179,31 @@ if page == "Home":
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    st.subheader("Search & Add")
-    st.caption("Phase 1: title-only. Phase 2: OMDb posters/details will appear here.")
-    q = st.text_input("Movie title", placeholder="Try: Inception, Titanic, The Matrix", key="home_q")
+    st.subheader("Search & Add (Phase 1: title-only)")
+    st.caption("Your teammate will integrate OMDb here to show posters/details.")
+    q = st.text_input("Movie title", placeholder="Try: Inception, Titanic, The Matrix")
 
-    col1, col2 = st.columns([1, 1])
-    with col1:
+#adding the button for OMDb test    
+    if st.button("🔎 Fetch OMDb details", use_container_width=True):
+        try:
+            details = app.fetch_movie_details(q)
+            if details.get("Response") == "False":
+                st.error(details.get("Error", "Movie not found"))
+            else:
+                st.success(f"{details.get('Title')} ({details.get('Year')})")
+                st.write(details.get("Genre"))
+                st.write(details.get("Plot"))
+                poster = details.get("Poster")
+                if poster and poster != "N/A":
+                    st.image(poster, width=220)
+                st.json(details)
+        except Exception as e:
+            st.error(str(e))
+
+
+    if st.session_state.session_user is None:
+        st.info("Login to save watchlist to the database.")
+    else:
         if st.button("➕ Add to Watchlist", use_container_width=True):
             if not is_logged_in():
                 st.warning("Login first to save your watchlist.")
@@ -194,6 +213,8 @@ if page == "Home":
                     st.success("Added to watchlist.")
                 else:
                     st.info("Already added or empty title.")
+                    
+    col1, col2 = st.columns(2)
     with col2:
         if st.button("🎯 Go to Recommendations", use_container_width=True):
             st.session_state["__nav_target"] = "Recommendations"
@@ -293,6 +314,8 @@ elif page == "Favorite Genres":
 
     st.caption("Select genres you like. Recommendations are based on this + watched history.")
     selected = st.multiselect("Genres", options=ALL_GENRES, default=current)
+
+    
 
     col1, col2 = st.columns([1, 1])
     with col1:

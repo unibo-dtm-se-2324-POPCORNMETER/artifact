@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
+from popcorn_meter.infrastructure.omdb_client import OmdbClient
 
 
 ALL_GENRES = [
@@ -22,8 +23,9 @@ class AppService:
     Streamlit UI should call ONLY this layer (not raw SQL).
     """
 
-    def __init__(self, repo: SqliteRepo) -> None:
+    def __init__(self, repo: SqliteRepo,omdb: OmdbClient) -> None:
         self.repo = repo
+        self.omdb= omdb
 
     # --- Auth ---
     def sign_up(self, username: str, email: str, password: str) -> bool:
@@ -79,7 +81,7 @@ class AppService:
         fav = set(self.get_genres(user_id))
         watched = set(self.list_watched(user_id))
 
-        # Demo catalog until OMDb integration
+        # Demo catalog until OMDb integration (your teammate will replace with real movies)
         demo_catalog = [
             ("Inception", "Sci-Fi"),
             ("Interstellar", "Sci-Fi"),
@@ -98,4 +100,8 @@ class AppService:
         if not fav:
             return []
 
-        return [t for (t, g) in demo_catalog if g in fav and t not in watched]
+        recs = [t for (t, g) in demo_catalog if g in fav and t not in watched]
+        return recs
+    
+    def fetch_movie_details(self, title: str) -> dict:
+        return self.omdb.search_by_title(title)
