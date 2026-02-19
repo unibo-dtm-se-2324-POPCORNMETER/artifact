@@ -99,8 +99,9 @@ def movie_card(title: str, meta: str = ""):
 
 # Repo + app service
 repo = SqliteRepo("popcorn_meter.db")
-app = AppService(repo)
 omdb = OmdbClient()
+app = AppService(repo,omdb)
+
 
 # Session
 if "session_user" not in st.session_state:
