@@ -213,7 +213,7 @@ if page == "Home":
                     st.success("Added to watchlist.")
                 else:
                     st.info("Already added or empty title.")
-                    
+
     col1, col2 = st.columns(2)
     with col2:
         if st.button("🎯 Go to Recommendations", use_container_width=True):
@@ -257,7 +257,7 @@ elif page == "Account":
             <div class="card">
                 <h3 style="margin:0;">Welcome, {st.session_state.session_user.username} 👋</h3>
                 <p class="small-muted" style="margin-top:6px;">
-                    Your data is stored in SQLite (preferences, watchlist, watched).
+                    Now you can see your preferences, watchlist and watched movies!
                 </p>
             </div>
             """,
