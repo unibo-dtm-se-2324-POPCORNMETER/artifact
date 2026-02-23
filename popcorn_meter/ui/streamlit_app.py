@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 from popcorn_meter.infrastructure.omdb_client import OmdbClient
 from popcorn_meter.application.use_cases import AppService, ALL_GENRES
 from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
@@ -8,9 +7,9 @@ from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
 # ----------------------------
 # App setup
 # ----------------------------
-st.set_page_config(page_title="Popcorn Meter", page_icon="🍿", layout="wide")
+st.set_page_config(page_title="Popcorn Meter", layout="wide")
 
-# Dark theme but keep header/toggle usable
+# Dark theme (clean) + consistent components
 st.markdown(
     """
 <style>
@@ -59,16 +58,23 @@ div[data-baseweb="input"] input {
     border: 1px solid #262b36;
     border-radius: 14px;
     padding: 12px;
-    height: 270px;
+    height: 290px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }
 .poster {
-    height: 175px;
+    height: 190px;
     border-radius: 12px;
     background: linear-gradient(135deg, #2b2f3a 0%, #12141d 60%);
     border: 1px solid #2a2f3a;
+    overflow: hidden;
+}
+.poster img {
+    width: 100%;
+    height: 190px;
+    object-fit: cover;
+    display: block;
 }
 .title {
     font-size: 14px;
@@ -98,12 +104,19 @@ hr { border: none; border-top: 1px solid #252a36; margin: 18px 0; }
     unsafe_allow_html=True,
 )
 
-
-def movie_tile(title: str, meta: str = "") -> None:
+# ----------------------------
+# Helpers
+# ----------------------------
+def movie_tile(title: str, meta: str = "", poster_url: str | None = None) -> None:
+    poster_html = (
+        f'<div class="poster"><img src="{poster_url}" alt="{title} poster" /></div>'
+        if poster_url
+        else '<div class="poster"></div>'
+    )
     st.markdown(
         f"""
         <div class="movie-card">
-            <div class="poster"></div>
+            {poster_html}
             <div>
                 <div class="title">{title}</div>
                 <div class="meta">{meta}</div>
@@ -116,9 +129,14 @@ def movie_tile(title: str, meta: str = "") -> None:
 # Repo + app service
 repo = SqliteRepo("popcorn_meter.db")
 omdb = OmdbClient()
-app = AppService(repo,omdb)
+app = AppService(repo, omdb)
 
-
+@st.cache_data(ttl=24 * 3600)
+def fetch_details_cached(title: str) -> dict:
+    title = (title or "").strip()
+    if not title:
+        return {}
+    return app.fetch_movie_details(title)
 
 # ----------------------------
 # Session state
@@ -126,10 +144,11 @@ app = AppService(repo,omdb)
 if "session_user" not in st.session_state:
     st.session_state.session_user = None  # SessionUser | None
 
+if "last_details" not in st.session_state:
+    st.session_state.last_details = {}
 
 def is_logged_in() -> bool:
     return st.session_state.session_user is not None
-
 
 def require_login() -> bool:
     if not is_logged_in():
@@ -137,14 +156,13 @@ def require_login() -> bool:
         return False
     return True
 
-
 # ----------------------------
 # Sidebar
 # ----------------------------
-st.sidebar.markdown("## 🍿 Popcorn Meter")
+st.sidebar.markdown("## Popcorn Meter")
 
 if is_logged_in():
-    st.sidebar.success(f"Hello, {st.session_state.session_user.username} 👋")
+    st.sidebar.success(f"Hello, {st.session_state.session_user.username}")
 else:
     st.sidebar.info("Guest (not logged in)")
 
@@ -153,9 +171,6 @@ page = st.sidebar.radio(
     ["Home", "Account", "Favorite Genres", "Watchlist", "Watched", "Recommendations"],
 )
 
-st.sidebar.caption("SQLite persistence enabled • OMDb integration next")
-
-
 # ----------------------------
 # HOME
 # ----------------------------
@@ -163,7 +178,7 @@ if page == "Home":
     st.markdown(
         """
         <div class="card">
-            <h1 style="margin:0;">🍿 Popcorn Meter</h1>
+            <h1 style="margin:0; color:#e50914;">Popcorn Meter</h1>
             <p style="margin:6px 0 0 0; color:#b9c0cc;">
                 Personalized movie suggestions using your profile, preferences, and watch history.
             </p>
@@ -179,59 +194,78 @@ if page == "Home":
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    st.subheader("Search & Add (Phase 1: title-only)")
-    st.caption("Your teammate will integrate OMDb here to show posters/details.")
+    st.subheader("Search")
     q = st.text_input("Movie title", placeholder="Try: Inception, Titanic, The Matrix")
 
-#adding the button for OMDb test    
-    if st.button("🔎 Fetch OMDb details", use_container_width=True):
+    b1, b2, b3 = st.columns([2, 2, 2])
+    with b1:
+        do_fetch = st.button("Fetch details", use_container_width=True)
+    with b2:
+        do_add = st.button("Add to Watchlist", use_container_width=True, disabled=not is_logged_in())
+    with b3:
+        do_remove = st.button("Remove from Watchlist", use_container_width=True, disabled=not is_logged_in())
+
+    if do_fetch:
         try:
-            details = app.fetch_movie_details(q)
-            if details.get("Response") == "False":
+            details = fetch_details_cached(q)
+            if not details:
+                st.warning("Enter a movie title.")
+                st.session_state.last_details = {}
+            elif details.get("Response") == "False":
                 st.error(details.get("Error", "Movie not found"))
+                st.session_state.last_details = {}
             else:
-                st.success(f"{details.get('Title')} ({details.get('Year')})")
-                st.write(details.get("Genre"))
-                st.write(details.get("Plot"))
-                poster = details.get("Poster")
-                if poster and poster != "N/A":
-                    st.image(poster, width=220)
-                st.json(details)
+                st.session_state.last_details = details
         except Exception as e:
             st.error(str(e))
+            st.session_state.last_details = {}
 
+    details = st.session_state.last_details
+    target_title = (details.get("Title") if details else q).strip()
 
-    if st.session_state.session_user is None:
-        st.info("Login to save watchlist to the database.")
-    else:
-        if st.button("➕ Add to Watchlist", use_container_width=True):
-            if not is_logged_in():
-                st.warning("Login first to save your watchlist.")
-            else:
-                ok = app.add_to_watchlist(st.session_state.session_user.user_id, q)
-                if ok:
-                    st.success("Added to watchlist.")
-                else:
-                    st.info("Already added or empty title.")
+    if details:
+        title = details.get("Title", "")
+        year = details.get("Year", "")
+        genre = details.get("Genre", "")
+        plot = details.get("Plot", "")
+        poster = details.get("Poster", "")
 
-    col1, col2 = st.columns(2)
-    with col2:
-        if st.button("🎯 Go to Recommendations", use_container_width=True):
-            st.session_state["__nav_target"] = "Recommendations"
-            st.rerun()
+        left, right = st.columns([1, 2])
+        with left:
+            if poster and poster != "N/A":
+                st.image(poster, use_container_width=True)
+        with right:
+            st.markdown(f"### {title} ({year})" if year else f"### {title}")
+            if genre:
+                st.caption(genre)
+            if plot:
+                st.write(plot)
+
+    if do_add and is_logged_in():
+        ok = app.add_to_watchlist(st.session_state.session_user.user_id, target_title)
+        st.success("Added to watchlist." if ok else "Already added or empty title.")
+
+    if do_remove and is_logged_in():
+        app.remove_from_watchlist(st.session_state.session_user.user_id, target_title)
+        st.success("Removed (if it existed).")
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    st.subheader("🔥 Trending Now (demo)")
+    st.subheader("Trending Now")
     trending = ["Inception", "Interstellar", "The Dark Knight", "The Matrix", "Titanic", "Gladiator"]
     cols = st.columns(6)
     for i, t in enumerate(trending):
         with cols[i % 6]:
-            movie_tile(t, meta="Posters in Phase 2 (OMDb)")
+            d = fetch_details_cached(t)
+            poster_url = None
+            if d and d.get("Response") != "False":
+                p = d.get("Poster")
+                poster_url = p if p and p != "N/A" else None
+            movie_tile(t, meta="", poster_url=poster_url)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.subheader("⭐ Your Watchlist (preview)")
+    st.subheader("Your Watchlist")
     if not is_logged_in():
         st.info("Login to see your saved watchlist.")
     else:
@@ -242,22 +276,26 @@ if page == "Home":
             cols2 = st.columns(6)
             for i, t in enumerate(items[:12]):
                 with cols2[i % 6]:
-                    movie_tile(t, meta="Saved")
-
+                    d = fetch_details_cached(t)
+                    poster_url = None
+                    if d and d.get("Response") != "False":
+                        p = d.get("Poster")
+                        poster_url = p if p and p != "N/A" else None
+                    movie_tile(t, meta="", poster_url=poster_url)
 
 # ----------------------------
 # ACCOUNT
 # ----------------------------
 elif page == "Account":
-    st.header("👤 Account")
+    st.header("Account")
 
     if is_logged_in():
         st.markdown(
             f"""
             <div class="card">
-                <h3 style="margin:0;">Welcome, {st.session_state.session_user.username} 👋</h3>
+                <h3 style="margin:0;">Welcome, {st.session_state.session_user.username}</h3>
                 <p class="small-muted" style="margin-top:6px;">
-                    Now you can see your preferences, watchlist and watched movies!
+                    You can manage your preferences, watchlist and watched movies.
                 </p>
             </div>
             """,
@@ -300,22 +338,19 @@ elif page == "Account":
                     st.success(f"Welcome back, {u.username}!")
                     st.rerun()
 
-
 # ----------------------------
 # FAVORITE GENRES
 # ----------------------------
 elif page == "Favorite Genres":
-    st.header("🎛️ Favorite Genres")
+    st.header("Favorite Genres")
     if not require_login():
         st.stop()
 
     uid = st.session_state.session_user.user_id
     current = app.get_genres(uid)
 
-    st.caption("Select genres you like. Recommendations are based on this + watched history.")
+    st.caption("Select genres you like. Recommendations use this + watched history.")
     selected = st.multiselect("Genres", options=ALL_GENRES, default=current)
-
-    
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -325,12 +360,11 @@ elif page == "Favorite Genres":
     with col2:
         st.info("Tip: Add watched movies to refine recommendations.")
 
-
 # ----------------------------
 # WATCHLIST
 # ----------------------------
 elif page == "Watchlist":
-    st.header("⭐ Watchlist")
+    st.header("Watchlist")
     if not require_login():
         st.stop()
 
@@ -341,14 +375,11 @@ elif page == "Watchlist":
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        if st.button("➕ Add", use_container_width=True):
+        if st.button("Add", use_container_width=True):
             ok = app.add_to_watchlist(uid, q)
-            if ok:
-                st.success("Added.")
-            else:
-                st.info("Already added or empty title.")
+            st.success("Added." if ok else "Already added or empty title.")
     with col2:
-        if st.button("🧹 Clear Watchlist", use_container_width=True):
+        if st.button("Clear Watchlist", use_container_width=True):
             app.clear_watchlist(uid)
             st.success("Cleared.")
 
@@ -360,38 +391,34 @@ elif page == "Watchlist":
     else:
         st.subheader("Your watchlist")
         for title in items:
-            r1, r2 = st.columns([6, 1])
+            r1, r2 = st.columns([6, 2])
             with r1:
-                st.write(f"• {title}")
+                st.write(title)
             with r2:
-                if st.button("Remove", key=f"rm_wl_{title}"):
+                if st.button("Remove", key=f"rm_wl_{title}", use_container_width=True):
                     app.remove_from_watchlist(uid, title)
                     st.rerun()
-
 
 # ----------------------------
 # WATCHED
 # ----------------------------
 elif page == "Watched":
-    st.header("✅ Watched History")
+    st.header("Watched History")
     if not require_login():
         st.stop()
 
     uid = st.session_state.session_user.user_id
-    st.caption("Movies you already watched. These are excluded from recommendations.")
+    st.caption("Watched movies are excluded from recommendations.")
 
     q = st.text_input("Add watched movie title", key="watched_add", placeholder="e.g., The Matrix")
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        if st.button("➕ Add Watched", use_container_width=True):
+        if st.button("Add Watched", use_container_width=True):
             ok = app.add_to_watched(uid, q)
-            if ok:
-                st.success("Added.")
-            else:
-                st.info("Already added or empty title.")
+            st.success("Added." if ok else "Already added or empty title.")
     with col2:
-        if st.button("🧹 Clear Watched", use_container_width=True):
+        if st.button("Clear Watched", use_container_width=True):
             app.clear_watched(uid)
             st.success("Cleared.")
 
@@ -403,14 +430,13 @@ elif page == "Watched":
     else:
         st.subheader("Watched")
         for t in items:
-            st.write(f"• {t}")
-
+            st.write(t)
 
 # ----------------------------
 # RECOMMENDATIONS
 # ----------------------------
 else:
-    st.header("🎬 Recommendations")
+    st.header("Recommendations")
     if not require_login():
         st.stop()
 
@@ -433,15 +459,20 @@ else:
     st.markdown("<hr>", unsafe_allow_html=True)
 
     if not genres:
-        st.info("Choose favorite genres first (Favorite Genres page).")
+        st.info("Choose favorite genres first.")
         st.stop()
 
     recs = app.recommend_titles(uid)
     if not recs:
         st.info("No recommendations found. Try adding genres or clearing watched list.")
     else:
-        st.subheader("Recommended for you (demo tiles)")
+        st.subheader("Recommended for you")
         cols = st.columns(6)
         for i, title in enumerate(recs[:12]):
             with cols[i % 6]:
-                movie_tile(title, meta="Rule-based (Phase 1). OMDb in Phase 2.")
+                d = fetch_details_cached(title)
+                poster_url = None
+                if d and d.get("Response") != "False":
+                    p = d.get("Poster")
+                    poster_url = p if p and p != "N/A" else None
+                movie_tile(title, meta="", poster_url=poster_url)
