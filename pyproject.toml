@@ -19,6 +19,7 @@ mypy = "^1.10.1"
 poethepoet = "^0.37.0"
 poetry = "^1.8.3"
 pytest = "^8.2.2"
+types-requests = "^2.32.4.20260107"
 
 [tool.poe.tasks]
 test = "python -m unittest discover -v -s tests -p '*.py'"
