@@ -22,8 +22,8 @@ pytest = "^8.2.2"
 types-requests = "^2.32.4.20260107"
 
 [tool.poe.tasks]
-test = "python -m unittest discover -v -s tests -p '*.py'"
-coverage = "coverage run -m unittest discover -v -s tests -p '*.py'"
+test = "python -m pytest discover -v -s tests -p '*.py'"
+coverage = "coverage run -m pytest"
 coverage-report = "coverage report -m"
 coverage-html = "coverage html"
 mypy = "mypy popcorn_meter tests"
