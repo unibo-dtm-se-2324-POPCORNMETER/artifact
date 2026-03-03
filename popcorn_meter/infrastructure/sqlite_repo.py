@@ -1,4 +1,7 @@
 import sqlite3
+import hashlib
+import hmac
+import secrets
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -22,6 +25,38 @@ class SqliteRepo:
         conn = sqlite3.connect(self.db_path)
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
+
+    @staticmethod
+    def _hash_password(password: str, *, iterations: int = 200_000) -> str:
+        salt = secrets.token_hex(16)
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            bytes.fromhex(salt),
+            iterations,
+        ).hex()
+        return f"pbkdf2_sha256${iterations}${salt}${digest}"
+
+    @staticmethod
+    def _verify_password(password: str, stored_password: str) -> bool:
+        parts = stored_password.split("$")
+        if len(parts) == 4 and parts[0] == "pbkdf2_sha256":
+            _, iterations_s, salt, digest = parts
+            try:
+                iterations = int(iterations_s)
+            except ValueError:
+                return False
+
+            computed = hashlib.pbkdf2_hmac(
+                "sha256",
+                password.encode("utf-8"),
+                bytes.fromhex(salt),
+                iterations,
+            ).hex()
+            return hmac.compare_digest(computed, digest)
+
+        # Backward compatibility for legacy plaintext rows.
+        return hmac.compare_digest(stored_password, password)
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -75,11 +110,13 @@ class SqliteRepo:
         if not username or not email or not password:
             return False
 
+        password_hash = self._hash_password(password)
+
         try:
             with self._connect() as conn:
                 conn.execute(
                     "INSERT INTO users(username, email, password) VALUES (?, ?, ?)",
-                    (username, email, password),
+                    (username, email, password_hash),
                 )
             return True
         except sqlite3.IntegrityError:
@@ -92,7 +129,20 @@ class SqliteRepo:
                 "SELECT password FROM users WHERE email = ?",
                 (email,),
             ).fetchone()
-        return (row is not None) and (row[0] == password)
+        if row is None:
+            return False
+
+        stored_password = str(row[0])
+        ok = self._verify_password(password, stored_password)
+
+        # Opportunistic migration for legacy plaintext passwords.
+        if ok and "$" not in stored_password:
+            with self._connect() as conn:
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE email = ?",
+                    (self._hash_password(password), email),
+                )
+        return ok
 
     def get_user_id_by_email(self, email: str) -> Optional[int]:
         email = email.strip().lower()

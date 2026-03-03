@@ -18,7 +18,20 @@ repo = SqliteRepo("popcorn_meter.db")
 omdb = OmdbClient()
 app = AppService(repo, omdb)
 
-TMDB_KEY = os.getenv("TMDB_API_KEY", "").strip()
+def _resolve_tmdb_key() -> str:
+    k = os.getenv("TMDB_API_KEY", "").strip()
+    if k:
+        return k
+    try:
+        k2 = st.secrets.get("TMDB_API_KEY")  # type: ignore[attr-defined]
+        if k2:
+            return str(k2).strip()
+    except Exception:
+        pass
+    return ""
+
+
+TMDB_KEY = _resolve_tmdb_key()
 
 # ----------------------------
 # Session state

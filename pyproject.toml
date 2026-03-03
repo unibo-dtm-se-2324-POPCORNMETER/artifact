@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "template-python-project-poetry"
+name = "popcorn-meter"
 packages = [
     { include = "popcorn_meter" },
 ]
 version = "2.4.0"
-description = "A template for Python projects, using Poetry"
-authors = ["Giovanni Ciatto <giovanni.ciatto@unibo.it>"]
+description = "A Streamlit app for movie discovery, watchlists, and recommendations."
+authors = ["ethassan <ethassan@users.noreply.github.com>"]
 license = "Apache 2.0"
 readme = "README.md"
 
@@ -20,18 +20,22 @@ mypy = "^1.10.1"
 poethepoet = "^0.37.0"
 poetry = "^1.8.3"
 pytest = "^8.2.2"
+ruff = "^0.13.2"
 types-requests = "^2.32.4.20260107"
 
 [tool.poe.tasks]
-test = "python -m pytest discover -v -s tests -p '*.py'"
-coverage = "coverage run -m pytest"
+test = "python -m pytest -v tests"
+coverage = "coverage run -m pytest tests"
 coverage-report = "coverage report -m"
 coverage-html = "coverage html"
 mypy = "mypy popcorn_meter tests"
+ruff-check = "ruff check popcorn_meter tests"
+static-checks = ["mypy", "ruff-check"]
+format = "ruff format popcorn_meter tests"
 compile = "python -m compileall popcorn_meter tests"
 
 [tool.poetry.scripts]
-artifact = "popcorn_meter.__main__:main"
+popcorn-meter = "popcorn_meter.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]
