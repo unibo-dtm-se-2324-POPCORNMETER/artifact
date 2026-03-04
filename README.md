@@ -38,8 +38,13 @@ poetry run poe test
 Run static checks:
 
 ```bash
-poetry run poe mypy
-poetry run poe compile
+poetry run poe static-checks
+```
+
+Format code:
+
+```bash
+poetry run poe format
 ```
 
 Run the app:
