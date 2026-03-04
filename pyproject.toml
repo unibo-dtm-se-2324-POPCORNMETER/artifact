@@ -3,7 +3,7 @@ name = "popcorn-meter"
 packages = [
     { include = "popcorn_meter" },
 ]
-version = "2.4.0"
+version = "1.1.2"
 description = "A Streamlit app for movie discovery, watchlists, and recommendations."
 authors = ["ethassan <ethassan@users.noreply.github.com>"]
 license = "Apache 2.0"

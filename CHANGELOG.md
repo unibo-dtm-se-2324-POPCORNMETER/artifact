@@ -1,3 +1,14 @@
+## [1.1.2](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.1...1.1.2) (2026-03-04)
+
+### Bug Fixes
+
+* **ci:** correct setup-node step in deploy workflow ([ddb0d12](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/ddb0d12ed7aa0bca6e7327b54e54895a727d9de5))
+
+### General maintenance
+
+* align CI matrix and docs with template ([4cbd6b0](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/4cbd6b041fdfe5db1490bd98cace37d041d64e84))
+* merge develop into master for release ([2812083](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/281208378cccac6670c844068649560eb459cd45))
+
 ## [2.4.0](https://github.com/aequitas-aod/template-python-project-poetry/compare/2.3.1...2.4.0) (2025-10-19)
 
 ### Features
