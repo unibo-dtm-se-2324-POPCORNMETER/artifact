@@ -1,83 +1,92 @@
-import pytest
+import sqlite3
+import tempfile
 from pathlib import Path
+from unittest import TestCase
+
 from popcorn_meter.infrastructure.sqlite_repo import SqliteRepo
 
 
-@pytest.fixture
-def repo(tmp_path):
-    db_file = tmp_path / "test.db"
-    return SqliteRepo(db_file)
+class TestSqliteRepo(TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        db_file = Path(self._tmp.name) / "test.db"
+        self.repo = SqliteRepo(db_file)
 
+    def tearDown(self):
+        self._tmp.cleanup()
 
-# ------------------ Users ------------------
+    # ------------------ Users ------------------
+    def test_create_user_and_login_success(self):
+        ok = self.repo.create_user("Alice", "alice@example.com", "secret")
+        self.assertTrue(ok)
+        self.assertTrue(self.repo.verify_login("alice@example.com", "secret"))
 
-def test_create_user_and_login_success(repo):
-    ok = repo.create_user("Alice", "alice@example.com", "secret")
-    assert ok is True
+    def test_password_is_stored_hashed(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
 
-    assert repo.verify_login("alice@example.com", "secret") is True
+        with sqlite3.connect(self.repo.db_path) as conn:
+            row = conn.execute(
+                "SELECT password FROM users WHERE email = ?",
+                ("alice@example.com",),
+            ).fetchone()
 
+        self.assertIsNotNone(row)
+        stored = str(row[0])
+        self.assertNotEqual(stored, "secret")
+        self.assertTrue(stored.startswith("pbkdf2_sha256$"))
 
-def test_create_user_duplicate_email_fails(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
-    ok = repo.create_user("Bob", "alice@example.com", "other")
+    def test_verify_login_fails_for_wrong_password(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        self.assertFalse(self.repo.verify_login("alice@example.com", "bad-secret"))
 
-    assert ok is False
+    def test_create_user_duplicate_email_fails(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        ok = self.repo.create_user("Bob", "alice@example.com", "other")
+        self.assertFalse(ok)
 
+    def test_get_user_id_and_username(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
+        username = self.repo.get_username_by_email("alice@example.com")
 
-def test_get_user_id_and_username(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
+        self.assertIsNotNone(uid)
+        self.assertEqual(username, "Alice")
 
-    uid = repo.get_user_id_by_email("alice@example.com")
-    username = repo.get_username_by_email("alice@example.com")
+    # ------------------ Preferences ------------------
+    def test_set_and_get_favorite_genres(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
 
-    assert uid is not None
-    assert username == "Alice"
+        self.repo.set_favorite_genres(uid, ["Action", "Drama", "Drama"])
+        genres = self.repo.get_favorite_genres(uid)
+        self.assertEqual(genres, ["Action", "Drama"])
 
+    # ------------------ Watchlist ------------------
+    def test_watchlist_add_and_list(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
 
-# ------------------ Preferences ------------------
+        self.repo.add_watchlist(uid, "Inception")
+        self.repo.add_watchlist(uid, "Titanic")
 
-def test_set_and_get_favorite_genres(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
-    uid = repo.get_user_id_by_email("alice@example.com")
+        titles = self.repo.list_watchlist(uid)
+        self.assertEqual(titles, ["Inception", "Titanic"])
 
-    repo.set_favorite_genres(uid, ["Action", "Drama", "Drama"])
+    def test_watchlist_duplicate_fails(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
 
-    genres = repo.get_favorite_genres(uid)
-    assert genres == ["Action", "Drama"]
+        self.repo.add_watchlist(uid, "Inception")
+        ok = self.repo.add_watchlist(uid, "Inception")
+        self.assertFalse(ok)
 
+    # ------------------ Watched ------------------
+    def test_watched_add_and_list(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
 
-# ------------------ Watchlist ------------------
+        self.repo.add_watched(uid, "Inception")
+        self.repo.add_watched(uid, "Titanic")
 
-def test_watchlist_add_and_list(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
-    uid = repo.get_user_id_by_email("alice@example.com")
-
-    repo.add_watchlist(uid, "Inception")
-    repo.add_watchlist(uid, "Titanic")
-
-    titles = repo.list_watchlist(uid)
-    assert titles == ["Inception", "Titanic"]
-
-
-def test_watchlist_duplicate_fails(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
-    uid = repo.get_user_id_by_email("alice@example.com")
-
-    repo.add_watchlist(uid, "Inception")
-    ok = repo.add_watchlist(uid, "Inception")
-
-    assert ok is False
-
-
-# ------------------ Watched ------------------
-
-def test_watched_add_and_list(repo):
-    repo.create_user("Alice", "alice@example.com", "secret")
-    uid = repo.get_user_id_by_email("alice@example.com")
-
-    repo.add_watched(uid, "Inception")
-    repo.add_watched(uid, "Titanic")
-
-    watched = repo.list_watched(uid)
-    assert watched == ["Inception", "Titanic"]
+        watched = self.repo.list_watched(uid)
+        self.assertEqual(watched, ["Inception", "Titanic"])

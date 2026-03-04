@@ -9,15 +9,23 @@ if (!pypiUsername || !pypiPassword) {
 }
 
 let prepareCmd = "poetry version -- \${nextRelease.version}";
-let publishCmd = `poetry publish --build --username ${pypiUsername} --password ${pypiPassword}`;
+let publishCmd = "";
+let publishBaseCmd = "poetry publish --build";
 
 if (testPypi) {
     // test-pypi repository name is defined in poetry.toml
-    publishCmd = publishCmd.replace("--build", "--build --repository pypi-test");
+    publishBaseCmd = `${publishBaseCmd} --repository pypi-test`;
 }
 
 if (dryRun) {
-    publishCmd = publishCmd.replace("--build", "--build --dry-run");
+    // In dry-run mode without PyPI creds, only build artifacts.
+    if (!pypiUsername || !pypiPassword) {
+        publishCmd = "poetry build";
+    } else {
+        publishCmd = `${publishBaseCmd} --dry-run --username ${pypiUsername} --password ${pypiPassword}`;
+    }
+} else {
+    publishCmd = `${publishBaseCmd} --username ${pypiUsername} --password ${pypiPassword}`;
 }
 
 import config from 'semantic-release-preconfigured-conventional-commits' with {type: 'json'};

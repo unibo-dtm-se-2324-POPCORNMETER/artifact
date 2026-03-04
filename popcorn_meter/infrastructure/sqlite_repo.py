@@ -1,20 +1,23 @@
 import sqlite3
+import hashlib
+import hmac
+import secrets
 from pathlib import Path
 from typing import Iterable, Optional
 
 
 class SqliteRepo:
     """
-    Very small SQLite repository for:
-    - users (username + email + password)   [plain password, as requested]
+    SQLite repository for:
+    - users (username + email + password)
     - preferences (favorite genres)
     - watchlist
     - watched
+    - feedback (like/dislike + rating)  ✅ NEW
     """
 
     def __init__(self, db_path: str | Path = "data/popcorn_meter.db") -> None:
         self.db_path = str(db_path)
-        # Make sure parent folder exists (e.g., data/)
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
@@ -22,6 +25,38 @@ class SqliteRepo:
         conn = sqlite3.connect(self.db_path)
         conn.execute("PRAGMA foreign_keys = ON;")
         return conn
+
+    @staticmethod
+    def _hash_password(password: str, *, iterations: int = 200_000) -> str:
+        salt = secrets.token_hex(16)
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            bytes.fromhex(salt),
+            iterations,
+        ).hex()
+        return f"pbkdf2_sha256${iterations}${salt}${digest}"
+
+    @staticmethod
+    def _verify_password(password: str, stored_password: str) -> bool:
+        parts = stored_password.split("$")
+        if len(parts) == 4 and parts[0] == "pbkdf2_sha256":
+            _, iterations_s, salt, digest = parts
+            try:
+                iterations = int(iterations_s)
+            except ValueError:
+                return False
+
+            computed = hashlib.pbkdf2_hmac(
+                "sha256",
+                password.encode("utf-8"),
+                bytes.fromhex(salt),
+                iterations,
+            ).hex()
+            return hmac.compare_digest(computed, digest)
+
+        # Backward compatibility for legacy plaintext rows.
+        return hmac.compare_digest(stored_password, password)
 
     def _init_db(self) -> None:
         with self._connect() as conn:
@@ -54,6 +89,17 @@ class SqliteRepo:
                     PRIMARY KEY (user_id, title),
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 );
+
+                /* ✅ NEW: feedback persistence */
+                CREATE TABLE IF NOT EXISTS feedback (
+                    user_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    liked INTEGER,          -- 1 (like), 0 (dislike), NULL (unset)
+                    rating INTEGER,         -- 1..10, NULL (unset)
+                    ts TEXT,                -- timestamp iso string
+                    PRIMARY KEY (user_id, title),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
                 """
             )
 
@@ -61,19 +107,19 @@ class SqliteRepo:
     def create_user(self, username: str, email: str, password: str) -> bool:
         username = username.strip()
         email = email.strip().lower()
-
         if not username or not email or not password:
             return False
+
+        password_hash = self._hash_password(password)
 
         try:
             with self._connect() as conn:
                 conn.execute(
                     "INSERT INTO users(username, email, password) VALUES (?, ?, ?)",
-                    (username, email, password),
+                    (username, email, password_hash),
                 )
             return True
         except sqlite3.IntegrityError:
-            # email already exists (UNIQUE) or other constraint issue
             return False
 
     def verify_login(self, email: str, password: str) -> bool:
@@ -83,7 +129,20 @@ class SqliteRepo:
                 "SELECT password FROM users WHERE email = ?",
                 (email,),
             ).fetchone()
-        return (row is not None) and (row[0] == password)
+        if row is None:
+            return False
+
+        stored_password = str(row[0])
+        ok = self._verify_password(password, stored_password)
+
+        # Opportunistic migration for legacy plaintext passwords.
+        if ok and "$" not in stored_password:
+            with self._connect() as conn:
+                conn.execute(
+                    "UPDATE users SET password = ? WHERE email = ?",
+                    (self._hash_password(password), email),
+                )
+        return ok
 
     def get_user_id_by_email(self, email: str) -> Optional[int]:
         email = email.strip().lower()
@@ -105,7 +164,7 @@ class SqliteRepo:
 
     # ---------- Preferences ----------
     def set_favorite_genres(self, user_id: int, genres: Iterable[str]) -> None:
-        cleaned = sorted({g.strip() for g in genres if g.strip()})
+        cleaned = sorted({g.strip() for g in genres if g and g.strip()})
         with self._connect() as conn:
             conn.execute("DELETE FROM preferences WHERE user_id = ?", (user_id,))
             conn.executemany(
@@ -143,6 +202,10 @@ class SqliteRepo:
                 (user_id, title),
             )
 
+    # aliases (your UI fallback calls various names)
+    def remove_from_watchlist(self, user_id: int, title: str) -> None:
+        self.remove_watchlist(user_id, title)
+
     def clear_watchlist(self, user_id: int) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM watchlist WHERE user_id = ?", (user_id,))
@@ -170,6 +233,17 @@ class SqliteRepo:
         except sqlite3.IntegrityError:
             return False
 
+    def remove_watched(self, user_id: int, title: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM watched WHERE user_id = ? AND title = ?",
+                (user_id, title),
+            )
+
+    # aliases (your UI fallback calls various names)
+    def remove_from_watched(self, user_id: int, title: str) -> None:
+        self.remove_watched(user_id, title)
+
     def clear_watched(self, user_id: int) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM watched WHERE user_id = ?", (user_id,))
@@ -181,3 +255,61 @@ class SqliteRepo:
                 (user_id,),
             ).fetchall()
         return [r[0] for r in rows]
+
+    # ---------- ✅ Feedback ----------
+    def save_feedback(
+        self,
+        user_id: int,
+        title: str,
+        liked: Optional[bool] = None,
+        rating: Optional[int] = None,
+        ts: Optional[str] = None,
+    ) -> None:
+        t = title.strip()
+        if not t:
+            return
+
+        liked_val = None
+        if liked is True:
+            liked_val = 1
+        elif liked is False:
+            liked_val = 0
+
+        rating_val = None
+        if rating is not None:
+            try:
+                r = int(rating)
+                if 1 <= r <= 10:
+                    rating_val = r
+            except Exception:
+                rating_val = None
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO feedback(user_id, title, liked, rating, ts)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, title)
+                DO UPDATE SET
+                    liked  = COALESCE(excluded.liked,  feedback.liked),
+                    rating = COALESCE(excluded.rating, feedback.rating),
+                    ts     = COALESCE(excluded.ts,     feedback.ts)
+                """,
+                (user_id, t, liked_val, rating_val, ts),
+            )
+
+    def get_feedback(self, user_id: int) -> dict[str, dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT title, liked, rating, ts FROM feedback WHERE user_id = ?",
+                (user_id,),
+            ).fetchall()
+
+        out: dict[str, dict] = {}
+        for title, liked, rating, ts in rows:
+            out[str(title)] = {
+                "liked": None if liked is None else bool(int(liked)),
+                "rating": None if rating is None else int(rating),
+                "ts": ts,
+            }
+        return out
