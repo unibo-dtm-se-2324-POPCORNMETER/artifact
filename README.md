@@ -1,38 +1,78 @@
 # Popcorn Meter
 
-Popcorn Meter is a Python project built with Poetry. It includes a Streamlit UI and a layered package structure for application logic, infrastructure integrations, and tests.
+Popcorn Meter is a desktop/web movie recommendation application with a Streamlit GUI, developed in Python for a University Software Engineering project, built using Streamlit, Poetry, OMDb integration, and the template provided by the University course.
 
-## Project Structure
+---
+
+Discover movies, build your watchlist, track watched titles, and get personalized recommendations based on your preferences and activity.
+
+The application combines:
+- account-based preferences and history
+- OMDb movie metadata
+- explainable recommendation logic (genres, actors, ratings, plot signals, and feedback)
+
+Popcorn Meter runs on Windows, Linux, and macOS.
+
+---
+
+## To start the software application
+
+This software project is tested with Python 3.10 and above. The recommended Python version is 3.12+.
+
+1) Clone the repository locally:
 
 ```bash
-<root>
-|-- popcorn_meter/              # main package
-|   |-- __init__.py
-|   |-- __main__.py             # launches the Streamlit app
-|   |-- application/            # use cases and ports
-|   |-- infrastructure/         # OMDb + SQLite adapters
-|   `-- ui/                     # Streamlit frontend
-|-- tests/                      # unit/integration/ui tests
-|-- .github/workflows/          # CI/CD workflows
-|-- pyproject.toml              # Poetry configuration
-|-- requirements.txt            # Poetry bootstrap dependency
-|-- release.config.mjs          # semantic-release config
-`-- renovate.json               # dependency update automation
+git clone https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact.git
 ```
 
-## Development
+2) Go into the project directory:
 
-Install dependencies:
+```bash
+cd artifact
+```
+
+3) Install the required dependencies:
 
 ```bash
 pip install -r requirements.txt
 poetry install
 ```
 
+4) (Optional) configure local API secrets for app features:
+
+Create `.streamlit/secrets.toml` with:
+
+```toml
+OMDB_API_KEY = "your_omdb_key"
+TMDB_API_KEY = "your_tmdb_key"
+```
+
+5) Launch the application:
+
+```bash
+poetry run popcorn-meter
+```
+
+Or:
+
+```bash
+poetry run python -m popcorn_meter
+```
+
+## Development commands
+
 Run tests:
 
 ```bash
 poetry run poe test
+```
+
+Run coverage:
+
+```bash
+poetry run poe coverage
+poetry run poe coverage-report
+poetry run poe coverage-html
 ```
 
 Run static checks:
@@ -47,27 +87,28 @@ Format code:
 poetry run poe format
 ```
 
-Run the app:
+## Further resources
 
+[`Bug Reports`](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/issues)
+
+[`Link to the project template`](https://github.com/unibo-dtm-se/template-python-project)
+
+## Project structure
+
+Overview:
 ```bash
-python -m popcorn_meter
+<root directory>
+├── popcorn_meter/          # main package
+│   ├── __init__.py         # python package marker
+│   └── __main__.py         # application entry point
+├── tests/                  # test package
+├── .github/                # configuration of GitHub CI
+│   └── workflows/          # configuration of GitHub Workflows
+│       ├── check.yml       # runs tests on multiple OS and versions of Python
+│       └── deploy.yml      # reusable workflow for semantic-release deployment
+├── LICENSE                 # license file (Apache 2.0)
+├── pyproject.toml          # project configuration (Poetry)
+├── renovate.json           # configuration of Renovate bot
+├── requirements.txt        # dependency to bootstrap Poetry
+└── release.config.js       # semantic-release configuration for PyPI/GitHub
 ```
-
-or:
-
-```bash
-poetry run popcorn-meter
-```
-
-## CI/CD and Releases
-
-- CI runs checks and tests on push and pull request via GitHub Actions.
-- Releases are managed by semantic-release through `.github/workflows/deploy.yml`.
-- Publish credentials are expected in repository secrets:
-- `PYPI_USERNAME` (use `__token__`)
-- `PYPI_PASSWORD` (PyPI API token)
-- `RELEASE_TOKEN` (GitHub token for release automation)
-
-## Dependency Updates
-
-Renovate is configured via `renovate.json` to open and manage dependency update pull requests.
