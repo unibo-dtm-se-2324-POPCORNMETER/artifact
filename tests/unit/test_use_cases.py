@@ -187,3 +187,78 @@ class TestUseCases(TestCase):
 
         self.assertEqual(data, {"Title": "Inception"})
         omdb.search_by_title.assert_called_once_with("Inception")
+
+    # ---------- Feedback ----------
+    def test_save_feedback_delegates_to_repo_when_available(self):
+        repo = Mock()
+        omdb = Mock()
+        svc = AppService(repo=repo, omdb=omdb)
+
+        svc.save_feedback(
+            user_id=7,
+            title="Interstellar",
+            liked=True,
+            rating=9,
+            ts="2026-03-01T00:00:00",
+        )
+
+        repo.save_feedback.assert_called_once_with(
+            7, "Interstellar", liked=True, rating=9, ts="2026-03-01T00:00:00"
+        )
+
+    def test_get_feedback_returns_empty_when_repo_method_missing(self):
+        class RepoNoFeedback:
+            pass
+
+        svc = AppService(repo=RepoNoFeedback(), omdb=Mock())
+        self.assertEqual(svc.get_feedback(1), {})
+
+    def test_recommend_titles_uses_omdb_scoring_and_feedback(self):
+        repo = Mock()
+        omdb = Mock()
+        svc = AppService(repo=repo, omdb=omdb)
+
+        svc.get_genres = Mock(return_value=["Sci-Fi"])
+        svc.list_watched = Mock(return_value=["Inception"])
+        svc.list_watchlist = Mock(return_value=["Interstellar"])
+        svc.get_feedback = Mock(
+            return_value={
+                "Interstellar": {"liked": True, "rating": 10},
+                "Knives Out": {"liked": False, "rating": None},
+            }
+        )
+
+        def fake_omdb(title):
+            data = {
+                "Inception": {
+                    "Response": "True",
+                    "Actors": "Matthew McConaughey, Someone Else",
+                    "Genre": "Sci-Fi, Action",
+                    "imdbRating": "8.8",
+                    "Plot": "A science fiction dream-heist movie.",
+                },
+                "Interstellar": {
+                    "Response": "True",
+                    "Actors": "Matthew McConaughey, Anne Hathaway",
+                    "Genre": "Sci-Fi, Adventure",
+                    "imdbRating": "8.6",
+                    "Plot": "A sci-fi journey through space and time.",
+                },
+                "Knives Out": {
+                    "Response": "True",
+                    "Actors": "No Match",
+                    "Genre": "Sci-Fi",
+                    "imdbRating": "0",
+                    "Plot": "",
+                },
+            }
+            return data.get(title, {"Response": "False", "Error": "not found"})
+
+        omdb.search_by_title.side_effect = fake_omdb
+
+        recs = svc.recommend_titles(1, limit=5)
+
+        self.assertIn("Interstellar", recs)
+        self.assertEqual(recs[0], "Interstellar")
+        # Disliked candidate should be filtered out due to non-positive score.
+        self.assertNotIn("Knives Out", recs)

@@ -39,6 +39,26 @@ class TestSqliteRepo(TestCase):
         self.repo.create_user("Alice", "alice@example.com", "secret")
         self.assertFalse(self.repo.verify_login("alice@example.com", "bad-secret"))
 
+    def test_verify_login_migrates_legacy_plaintext_password(self):
+        with sqlite3.connect(self.repo.db_path) as conn:
+            conn.execute(
+                "INSERT INTO users(username, email, password) VALUES (?, ?, ?)",
+                ("Legacy", "legacy@example.com", "legacy-secret"),
+            )
+
+        self.assertTrue(self.repo.verify_login("legacy@example.com", "legacy-secret"))
+
+        with sqlite3.connect(self.repo.db_path) as conn:
+            row = conn.execute(
+                "SELECT password FROM users WHERE email = ?",
+                ("legacy@example.com",),
+            ).fetchone()
+
+        self.assertIsNotNone(row)
+        new_stored = str(row[0])
+        self.assertNotEqual(new_stored, "legacy-secret")
+        self.assertTrue(new_stored.startswith("pbkdf2_sha256$"))
+
     def test_create_user_duplicate_email_fails(self):
         self.repo.create_user("Alice", "alice@example.com", "secret")
         ok = self.repo.create_user("Bob", "alice@example.com", "other")
@@ -90,3 +110,48 @@ class TestSqliteRepo(TestCase):
 
         watched = self.repo.list_watched(uid)
         self.assertEqual(watched, ["Inception", "Titanic"])
+
+    # ------------------ Feedback ------------------
+    def test_feedback_save_and_read(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
+
+        self.repo.save_feedback(
+            uid,
+            "Interstellar",
+            liked=True,
+            rating=9,
+            ts="2026-03-01T00:00:00",
+        )
+
+        feedback = self.repo.get_feedback(uid)
+        self.assertIn("Interstellar", feedback)
+        self.assertEqual(
+            feedback["Interstellar"],
+            {"liked": True, "rating": 9, "ts": "2026-03-01T00:00:00"},
+        )
+
+    def test_feedback_partial_update_keeps_existing_values(self):
+        self.repo.create_user("Alice", "alice@example.com", "secret")
+        uid = self.repo.get_user_id_by_email("alice@example.com")
+
+        self.repo.save_feedback(
+            uid,
+            "Interstellar",
+            liked=True,
+            rating=8,
+            ts="2026-03-01T00:00:00",
+        )
+        # Update only timestamp; liked/rating should remain due to COALESCE logic.
+        self.repo.save_feedback(
+            uid,
+            "Interstellar",
+            liked=None,
+            rating=None,
+            ts="2026-03-02T00:00:00",
+        )
+
+        feedback = self.repo.get_feedback(uid)
+        self.assertEqual(feedback["Interstellar"]["liked"], True)
+        self.assertEqual(feedback["Interstellar"]["rating"], 8)
+        self.assertEqual(feedback["Interstellar"]["ts"], "2026-03-02T00:00:00")
