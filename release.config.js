@@ -8,7 +8,7 @@ if (!pypiUsername || !pypiPassword) {
     console.warn("PYPI_USERNAME or PYPI_PASSWORD not set. Running in dry-run mode.");
 }
 
-let prepareCmd = "poetry version -- \${nextRelease.version}";
+let prepareCmd = "poetry version -- ${nextRelease.version}";
 let publishCmd = "";
 let publishBaseCmd = "poetry publish --build";
 
@@ -29,6 +29,11 @@ if (dryRun) {
 }
 
 import config from 'semantic-release-preconfigured-conventional-commits' with {type: 'json'};
+
+// Keep Git tags and package versions in the same numeric format (e.g., 1.2.3).
+config.tagFormat = "${version}";
+// Release only from main release branches.
+config.branches = ["master", "main"];
 
 config.plugins.push(
     ["@semantic-release/exec", {
