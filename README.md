@@ -110,6 +110,6 @@ Overview:
 |-- .github/workflows/          # CI/CD workflows
 |-- pyproject.toml              # Poetry configuration
 |-- requirements.txt            # Poetry bootstrap dependency
-|-- release.config.mjs          # semantic-release config
+|-- release.config.js          # semantic-release config
 `-- renovate.json               # dependency update automation
 ```
