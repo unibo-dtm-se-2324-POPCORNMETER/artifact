@@ -1,3 +1,19 @@
+## [1.1.4](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.3...1.1.4) (2026-03-06)
+
+### Bug Fixes
+
+* trigger TestPyPI release ([d6dd85c](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/d6dd85c6518bb84181bde939b404c473b0fe89d8))
+* trigger TestPyPI release ([2c1b95d](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/2c1b95ddc7c53b1200f534a3e3f3aa05d3f5a268))
+
+### Build and continuous integration
+
+* force release workflow to publish to TestPyPI ([7f595a0](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/7f595a0a8d2fbb19b8c25b52d6bb41dd095106bd))
+* **release:** unify semantic-release tag/version format ([33379c8](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/33379c8adc2b1a3a6935873b349d568bc1fcdfc9))
+
+### General maintenance
+
+* merge develop into master for TestPyPI release ([503e2f9](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/503e2f916c4fb32208a1b39b88c77d01cffb6895))
+
 ## [1.1.3](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.2...1.1.3) (2026-03-06)
 
 ### Bug Fixes
