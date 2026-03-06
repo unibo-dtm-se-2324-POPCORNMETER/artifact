@@ -89,7 +89,9 @@ poetry run poe format
 
 ## Further resources
 
-[`Bug Reports`](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/issues)
+[`Project documentation`](https://github.com/unibo-dtm-se-2324-POPCORNMETER/report)
+
+[`TestPyPI page`]()
 
 [`Link to the project template`](https://github.com/unibo-dtm-se/template-python-project)
 
@@ -97,18 +99,17 @@ poetry run poe format
 
 Overview:
 ```bash
-<root directory>
-├── popcorn_meter/          # main package
-│   ├── __init__.py         # python package marker
-│   └── __main__.py         # application entry point
-├── tests/                  # test package
-├── .github/                # configuration of GitHub CI
-│   └── workflows/          # configuration of GitHub Workflows
-│       ├── check.yml       # runs tests on multiple OS and versions of Python
-│       └── deploy.yml      # reusable workflow for semantic-release deployment
-├── LICENSE                 # license file (Apache 2.0)
-├── pyproject.toml          # project configuration (Poetry)
-├── renovate.json           # configuration of Renovate bot
-├── requirements.txt        # dependency to bootstrap Poetry
-└── release.config.js       # semantic-release configuration for PyPI/GitHub
+<root>
+|-- popcorn_meter/              # main package
+|   |-- __init__.py
+|   |-- __main__.py             # launches the Streamlit app
+|   |-- application/            # use cases and ports
+|   |-- infrastructure/         # OMDb + SQLite adapters
+|   `-- ui/                     # Streamlit frontend
+|-- tests/                      # unit/integration/ui tests
+|-- .github/workflows/          # CI/CD workflows
+|-- pyproject.toml              # Poetry configuration
+|-- requirements.txt            # Poetry bootstrap dependency
+|-- release.config.mjs          # semantic-release config
+`-- renovate.json               # dependency update automation
 ```

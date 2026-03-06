@@ -48,3 +48,8 @@ priority = "supplemental"
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.coverage.run]
+omit = [
+    "popcorn_meter/ui/*",
+]
