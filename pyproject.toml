@@ -3,18 +3,13 @@ name = "popcorn-meter"
 packages = [
     { include = "popcorn_meter" },
 ]
-<<<<<<< HEAD
-version = "1.1.2"
-=======
 version = "2.4.2"
->>>>>>> develop
 description = "A Streamlit app for movie discovery, watchlists, and recommendations."
 authors = ["Ethar Ali <ethassan@users.noreply.github.com>", "kosar Emazahery  <kosarem@users.noreply.github.com>"]
 license = "Apache 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-
 python = ">=3.10,<4.0.0"
 streamlit = "^1.54.0"
 
