@@ -1,3 +1,31 @@
+## [1.1.3](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.2...1.1.3) (2026-03-06)
+
+### Bug Fixes
+
+* resolve pyproject merge markers breaking poetry install ([43d6e76](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/43d6e76b0575eae533a32ff2057ab259caa05041))
+
+### Documentation
+
+* update README using project template format ([b7ffcbf](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/b7ffcbf028d6db347eb8540e04189f36b1233ce9))
+* update README with TestPyPI release information ([71bd551](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/71bd551fdde2ed88133c46ab5103b274961012e3))
+
+### Tests
+
+* improve coverage for critical service and repository paths ([df3cfa8](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/df3cfa86d803af81ef4e24d909ab2b36c8c9861a))
+
+### Build and continuous integration
+
+* gate deploy to main/master and sync workflows ([302773a](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/302773aa442697bd3f3cecebf65d5d7db9f2e89f))
+
+### General maintenance
+
+* merge develop into master and resolve conflicts ([c191cfd](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/c191cfd2cf172929962e71cd6010d08b5f171713))
+* **release:** bump version for TestPyPI metadata update ([68783ab](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/68783aba32ca2df45fd247de42f1c60f730874c5))
+* **release:** rename release config to release.config.js ([46e1687](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/46e168715e26010a1f2314e9cfbcbc6851915910))
+* update project metadata and docs ([ec8ddfd](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/ec8ddfd80f48db839b471e5265c7c8d00f16a29b))
+* update README, fix CI workflow, and improve coverage reporting ([bd6d4a6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/bd6d4a619103e720213c13625ef19a260ccb7c48))
+* update release config and project metadata ([c5a4d78](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/c5a4d78c0a20e49c9428a633336d80a5eb7fc3ec))
+
 ## [1.1.2](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.1...1.1.2) (2026-03-04)
 
 ### Bug Fixes
