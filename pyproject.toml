@@ -5,12 +5,12 @@ packages = [
 ]
 version = "2.4.0"
 description = "A Streamlit app for movie discovery, watchlists, and recommendations."
-authors = ["ethassan <ethassan@users.noreply.github.com>"]
+authors = ["Ethar Ali <ethassan@users.noreply.github.com>", "kosar Emazahery  <kosarem@users.noreply.github.com>"]
 license = "Apache 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-# update the Python versions in .github/workflows/check.yml if you change this
+
 python = ">=3.10,<4.0.0"
 streamlit = "^1.54.0"
 
