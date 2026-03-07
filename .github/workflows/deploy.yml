@@ -40,6 +40,9 @@ jobs:
       - name: Restore Development Environment
         run: poetry install
 
+      - name: Configure TestPyPI repository for publish
+        run: poetry config repositories.pypi-test https://test.pypi.org/legacy/
+
       # Uncomment to change default logging level during release
       # - name: Change default logging level
       #   run: sed -i -e 's/logging.DEBUG/logging.WARN/g' **/*/__init__.py
