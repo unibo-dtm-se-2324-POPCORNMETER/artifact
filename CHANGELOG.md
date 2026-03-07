@@ -1,3 +1,9 @@
+## [2.4.6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.5...2.4.6) (2026-03-07)
+
+### Bug Fixes
+
+* **cloud:** install local package for Streamlit Cloud ([d551269](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/d55126947fba6534b614b11400c0c53782cbdb4a))
+
 ## [2.4.5](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.4...2.4.5) (2026-03-07)
 
 ### Bug Fixes
