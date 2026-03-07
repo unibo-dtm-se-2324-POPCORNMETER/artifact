@@ -825,9 +825,10 @@ elif page == "Account":
 
             if st.button("Create account", key="btn_signup"):
                 ok = app.sign_up(su_user, su_email, su_pw)
-                st.success("Account created. Now login from the Login tab.") if ok else st.error(
-                    "Could not create account (email exists or fields empty)."
-                )
+                if ok:
+                    st.success("Account created. Now login from the Login tab.")
+                else:
+                    st.error("Could not create account (email exists or fields empty).")
 
         with tab2:
             st.subheader("Login to your account")
