@@ -1,3 +1,9 @@
+## [2.4.7](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.6...2.4.7) (2026-03-07)
+
+### Bug Fixes
+
+* **cloud:** stabilize Streamlit deploy and update docs links ([49331f6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/49331f65088ec6c80f783d017cdd153421b11ba0))
+
 ## [2.4.6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.5...2.4.6) (2026-03-07)
 
 ### Bug Fixes
