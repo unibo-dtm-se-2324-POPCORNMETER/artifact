@@ -1,3 +1,14 @@
+## [2.4.4](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.3...2.4.4) (2026-03-07)
+
+### Bug Fixes
+
+* **ci:** configure TestPyPI legacy endpoint for Poetry publish ([e0f50fe](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/e0f50fe8109c2bcbf9f0e0925a9053401b6eb2e5))
+* trigger TestPyPI publish after endpoint configuration ([0b6b3d6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/0b6b3d618c21a9f81c7b3cb2295124869c4b1076))
+
+### Documentation
+
+* **metadata:** add GitHub profile links for authors ([386e471](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/386e471f942a9c559db8ab1959e5772f17da9761))
+
 ## [2.4.3](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.2...2.4.3) (2026-03-07)
 
 ### Bug Fixes
