@@ -91,7 +91,11 @@ poetry run poe format
 
 [`Project documentation`](https://github.com/unibo-dtm-se-2324-POPCORNMETER/report)
 
-[`TestPyPI page`](https://test.pypi.org/project/popcorn-meter/2.4.1/)
+[`TestPyPI page`](https://test.pypi.org/project/popcorn-meter/)
+
+[`Ethar Ali (GitHub)`](https://github.com/EtharMAli)
+
+[`Kosar Emazahery (GitHub)`](https://github.com/kosaremazahery)
 
 [`Link to the project template`](https://github.com/unibo-dtm-se/template-python-project)
 
