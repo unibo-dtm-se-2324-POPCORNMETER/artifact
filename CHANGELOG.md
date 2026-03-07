@@ -1,3 +1,17 @@
+## [2.4.3](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.2...2.4.3) (2026-03-07)
+
+### Bug Fixes
+
+* trigger unified 2.4.x release ([410ac17](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/410ac172604d2dc422d7e63bce9f714f171bef33))
+
+### Tests
+
+* **ui:** make smoke test patch target robust ([208b2ec](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/208b2ece53d1df8d344498ba4b0ee6b2e2426ac3))
+
+### General maintenance
+
+* **release:** 1.1.4 [skip ci] ([ffce3c3](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/ffce3c33b3f9c2835441b3ac48e362d990e71224))
+
 ## [1.1.4](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/1.1.3...1.1.4) (2026-03-06)
 
 ### Bug Fixes
