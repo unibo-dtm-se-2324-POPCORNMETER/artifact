@@ -1,3 +1,11 @@
+## [2.4.5](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.4...2.4.5) (2026-03-07)
+
+### Bug Fixes
+
+* **docs:** update README TestPyPI and author profile links ([dd0d0c7](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/dd0d0c7be084e8bb8781cb6e5ff8fd5904932902))
+* final release trigger ([36867d6](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/36867d6f650886e1161dc90201685c813fbd6280))
+* trigger final release publish ([7a60743](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/commit/7a607434799f4c06d1d68545995833018e8b50ed))
+
 ## [2.4.4](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/compare/2.4.3...2.4.4) (2026-03-07)
 
 ### Bug Fixes
