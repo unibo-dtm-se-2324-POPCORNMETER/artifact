@@ -5,9 +5,14 @@ packages = [
 ]
 version = "2.4.3"
 description = "A Streamlit app for movie discovery, watchlists, and recommendations."
-authors = ["Ethar Ali <ethassan@users.noreply.github.com>", "kosar Emazahery  <kosarem@users.noreply.github.com>"]
+authors = ["Ethar Ali <ethassan@users.noreply.github.com>", "Kosar Emazahery <kosarem@users.noreply.github.com>"]
 license = "Apache 2.0"
 readme = "README.md"
+
+[tool.poetry.urls]
+Repository = "https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact"
+"Ethar Ali (GitHub)" = "https://github.com/EtharMAli"
+"Kosar Emazahery (GitHub)" = "https://github.com/kosaremazahery"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0.0"
