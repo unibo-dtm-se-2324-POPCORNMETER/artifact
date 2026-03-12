@@ -1,13 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from popcorn_meter.application.ports import RepoPort, MovieInfoPort
+from popcorn_meter.application.ports import MovieInfoPort, RepoPort
+from popcorn_meter.domain.factories.user_factory import UserFactory
+from popcorn_meter.domain.services.recommendation_service import RecommendationService
 
 ALL_GENRES = [
     "Action", "Adventure", "Animation", "Comedy", "Crime", "Drama", "Fantasy",
-    "Horror", "Mystery", "Romance", "Sci-Fi", "Thriller"
+    "Horror", "Mystery", "Romance", "Sci-Fi", "Thriller",
 ]
 
 
@@ -26,21 +28,31 @@ class AppService:
     def __init__(self, repo: RepoPort, omdb: MovieInfoPort) -> None:
         self.repo = repo
         self.omdb = omdb
+        self.recommendation_service = RecommendationService(omdb)
 
     # --- Auth ---
     def sign_up(self, username: str, email: str, password: str) -> bool:
-        return self.repo.create_user(username, email, password)
+        try:
+            registration = UserFactory.create_registration(username, email, password)
+        except ValueError:
+            return False
+        return self.repo.create_user(registration.username, registration.email, registration.password)
 
     def login(self, email: str, password: str) -> SessionUser | None:
-        ok = self.repo.verify_login(email, password)
+        try:
+            normalized_email = UserFactory.normalize_login_email(email)
+        except ValueError:
+            return None
+
+        ok = self.repo.verify_login(normalized_email, password)
         if not ok:
             return None
 
-        uid = self.repo.get_user_id_by_email(email)
+        uid = self.repo.get_user_id_by_email(normalized_email)
         if uid is None:
             return None
 
-        username = self.repo.get_username_by_email(email)
+        username = self.repo.get_username_by_email(normalized_email)
         if username is None:
             return None
 
@@ -58,7 +70,6 @@ class AppService:
         return self.repo.add_watchlist(user_id, title)
 
     def remove_from_watchlist(self, user_id: int, title: str) -> None:
-        # ✅ tests expect this exact delegation name
         self.repo.remove_watchlist(user_id, title)
 
     def clear_watchlist(self, user_id: int) -> None:
@@ -111,17 +122,6 @@ class AppService:
 
     # --- Recommendations ---
     def recommend_titles(self, user_id: int, limit: int = 12) -> list[str]:
-        """
-        Hybrid, explainable recommendation engine:
-        - Favorite genres (primary)
-        - Actors from watched movies (secondary)
-        - IMDb rating (quality)
-        - Plot keyword match (light theme signal)
-        - Optional persisted feedback (like/dislike + rating)
-        - Excludes watched
-        - Scores + ranks
-        - ✅ Fallback demo mode when OMDb is unavailable / mocked (for unit tests)
-        """
         fav_genres = set(self.get_genres(user_id))
         if not fav_genres:
             return []
@@ -136,115 +136,12 @@ class AppService:
             wl = []
         watchlist_titles = set(wl)
 
-        seed_titles = {
-            "Inception", "Interstellar", "The Dark Knight", "Gladiator",
-            "Titanic", "The Notebook", "The Conjuring",
-            "Knives Out", "Toy Story", "The Hangover",
-            "Se7en", "The Godfather",
-        }
-        candidate_pool = set(seed_titles) | set(watchlist_titles)
-
         feedback = self.get_feedback(user_id)
 
-        # ---------- OMDb-based scoring ----------
-        liked_actors: set[str] = set()
-
-        for title in watched_titles:
-            try:
-                d = self.omdb.search_by_title(title)
-            except Exception:
-                continue
-            if not isinstance(d, dict):
-                continue
-            if d.get("Response") == "False":
-                continue
-            actors_raw = (d.get("Actors", "") or "")
-            for a in actors_raw.split(","):
-                a = a.strip()
-                if a:
-                    liked_actors.add(a)
-
-        scored: list[tuple[str, float]] = []
-
-        for title in candidate_pool:
-            if title in watched_titles:
-                continue
-
-            try:
-                d = self.omdb.search_by_title(title)
-            except Exception:
-                continue
-
-            # If OMDb is mocked/unavailable, d won't be a dict -> skip (and fallback later)
-            if not isinstance(d, dict):
-                continue
-            if d.get("Response") == "False":
-                continue
-
-            score: float = 0.0
-
-            genre_str = (d.get("Genre", "") or "")
-            movie_genres = {g.strip() for g in genre_str.split(",") if g.strip()}
-            score += 3.0 * len(fav_genres & movie_genres)
-
-            actors_str = (d.get("Actors", "") or "")
-            movie_actors = {a.strip() for a in actors_str.split(",") if a.strip()}
-            score += 2.0 * len(liked_actors & movie_actors)
-
-            imdb_rating = (d.get("imdbRating", "0") or "0")
-            try:
-                rating_val = float(imdb_rating)
-                if rating_val > 0:
-                    score += rating_val / 2.0
-            except ValueError:
-                pass
-
-            plot = (d.get("Plot", "") or "").lower()
-            for g in fav_genres:
-                if g.lower() in plot:
-                    score += 1.0
-
-            if title in watchlist_titles:
-                score += 0.5
-
-            fb = feedback.get(title)
-            if isinstance(fb, dict):
-                liked = fb.get("liked", None)
-                user_rating = fb.get("rating", None)
-
-                if liked is True:
-                    score += 3.0
-                elif liked is False:
-                    score -= 5.0
-
-                if isinstance(user_rating, int) and 1 <= user_rating <= 10:
-                    score += float(user_rating) / 2.0
-
-            if score > 0:
-                scored.append((title, score))
-
-        scored.sort(key=lambda x: x[1], reverse=True)
-        omdb_ranked = [t for (t, _) in scored[: max(1, int(limit))]]
-
-        # ✅ If OMDb produced results, return them
-        if omdb_ranked:
-            return omdb_ranked
-
-        # ---------- Fallback demo mode (for unit tests / OMDb unavailable) ----------
-        demo_catalog = [
-            ("Inception", "Sci-Fi"),
-            ("Interstellar", "Sci-Fi"),
-            ("The Dark Knight", "Action"),
-            ("Gladiator", "Action"),
-            ("Titanic", "Romance"),
-            ("The Notebook", "Romance"),
-            ("The Conjuring", "Horror"),
-            ("Knives Out", "Mystery"),
-            ("Toy Story", "Animation"),
-            ("The Hangover", "Comedy"),
-            ("Se7en", "Crime"),
-            ("The Godfather", "Drama"),
-        ]
-
-        recs = [t for (t, g) in demo_catalog if g in fav_genres and t not in watched_titles]
-        return recs[: max(1, int(limit))]
+        return self.recommendation_service.recommend_titles(
+            favorite_genres=fav_genres,
+            watched_titles=watched_titles,
+            watchlist_titles=watchlist_titles,
+            feedback=feedback,
+            limit=limit,
+        )
