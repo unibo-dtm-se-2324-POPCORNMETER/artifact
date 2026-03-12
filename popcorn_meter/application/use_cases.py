@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from typing import Iterable, Optional
 
 from popcorn_meter.application.ports import MovieInfoPort, RepoPort
+from popcorn_meter.domain.entities.user_profile import UserProfile
 from popcorn_meter.domain.factories.user_factory import UserFactory
+from popcorn_meter.domain.value_objects.movie_title import MovieTitle
 from popcorn_meter.domain.services.recommendation_service import RecommendationService
 
 ALL_GENRES = [
@@ -29,6 +31,31 @@ class AppService:
         self.repo = repo
         self.omdb = omdb
         self.recommendation_service = RecommendationService(omdb)
+
+    def _load_profile(self, user_id: int) -> UserProfile:
+        favorite_genres = self.repo.get_favorite_genres(user_id)
+        if not isinstance(favorite_genres, (list, tuple, set)):
+            favorite_genres = []
+
+        watchlist = self.repo.list_watchlist(user_id)
+        if not isinstance(watchlist, (list, tuple, set)):
+            watchlist = []
+
+        watched = self.repo.list_watched(user_id)
+        if not isinstance(watched, (list, tuple, set)):
+            watched = []
+
+        feedback = self.get_feedback(user_id)
+        if not isinstance(feedback, dict):
+            feedback = {}
+
+        return UserProfile.from_primitives(
+            user_id=user_id,
+            favorite_genres=favorite_genres,
+            watchlist=watchlist,
+            watched=watched,
+            feedback=feedback,
+        )
 
     # --- Auth ---
     def sign_up(self, username: str, email: str, password: str) -> bool:
@@ -60,42 +87,76 @@ class AppService:
 
     # --- Preferences ---
     def set_genres(self, user_id: int, genres: Iterable[str]) -> None:
-        self.repo.set_favorite_genres(user_id, genres)
+        profile = self._load_profile(user_id)
+        profile.set_genres(genres)
+        self.repo.set_favorite_genres(user_id, profile.genre_values())
 
     def get_genres(self, user_id: int) -> list[str]:
-        return self.repo.get_favorite_genres(user_id)
+        return self._load_profile(user_id).genre_values()
 
     # --- Watchlist ---
     def add_to_watchlist(self, user_id: int, title: str) -> bool:
-        return self.repo.add_watchlist(user_id, title)
+        profile = self._load_profile(user_id)
+        try:
+            added = profile.add_to_watchlist(title)
+        except ValueError:
+            return False
+        if not added:
+            return False
+        return self.repo.add_watchlist(user_id, str(MovieTitle(title)))
 
     def remove_from_watchlist(self, user_id: int, title: str) -> None:
-        self.repo.remove_watchlist(user_id, title)
+        try:
+            normalized = str(MovieTitle(title))
+        except ValueError:
+            return
+        profile = self._load_profile(user_id)
+        profile.remove_from_watchlist(normalized)
+        self.repo.remove_watchlist(user_id, normalized)
 
     def clear_watchlist(self, user_id: int) -> None:
+        profile = self._load_profile(user_id)
+        profile.clear_watchlist()
         self.repo.clear_watchlist(user_id)
 
     def list_watchlist(self, user_id: int) -> list[str]:
-        return self.repo.list_watchlist(user_id)
+        return self._load_profile(user_id).watchlist_values()
 
     # --- Watched ---
     def add_to_watched(self, user_id: int, title: str) -> bool:
-        return self.repo.add_watched(user_id, title)
+        profile = self._load_profile(user_id)
+        try:
+            added = profile.add_to_watched(title)
+        except ValueError:
+            return False
+        if not added:
+            return False
+        return self.repo.add_watched(user_id, str(MovieTitle(title)))
 
     def remove_from_watched(self, user_id: int, title: str) -> None:
+        profile = self._load_profile(user_id)
+        try:
+            removed = profile.remove_from_watched(title)
+            normalized = str(MovieTitle(title))
+        except ValueError:
+            return
+        if not removed:
+            return
         fn = getattr(self.repo, "remove_watched", None)
         if callable(fn):
-            fn(user_id, title)
+            fn(user_id, normalized)
             return
         fn2 = getattr(self.repo, "remove_from_watched", None)
         if callable(fn2):
-            fn2(user_id, title)
+            fn2(user_id, normalized)
 
     def clear_watched(self, user_id: int) -> None:
+        profile = self._load_profile(user_id)
+        profile.clear_watched()
         self.repo.clear_watched(user_id)
 
     def list_watched(self, user_id: int) -> list[str]:
-        return self.repo.list_watched(user_id)
+        return self._load_profile(user_id).watched_values()
 
     # --- OMDb ---
     def fetch_movie_details(self, title: str) -> dict:
@@ -110,9 +171,15 @@ class AppService:
         rating: Optional[int] = None,
         ts: Optional[str] = None,
     ) -> None:
+        try:
+            profile = self._load_profile(user_id)
+            feedback = profile.record_feedback(title, liked=liked, rating=rating, ts=ts)
+        except ValueError:
+            return
         fn = getattr(self.repo, "save_feedback", None)
         if callable(fn):
-            fn(user_id, title, liked=liked, rating=rating, ts=ts)
+            record = feedback.to_record()
+            fn(user_id, str(feedback.title), liked=record["liked"], rating=record["rating"], ts=record["ts"])
 
     def get_feedback(self, user_id: int) -> dict[str, dict]:
         fn = getattr(self.repo, "get_feedback", None)
