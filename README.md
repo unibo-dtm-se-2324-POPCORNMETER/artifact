@@ -13,6 +13,8 @@ The application combines:
 
 Popcorn Meter runs on Windows, Linux, and macOS.
 
+A Streamlit Cloud demo is available at [`https://popcornmeter.streamlit.app/`](https://popcornmeter.streamlit.app/).
+
 ---
 
 ## To start the software application
