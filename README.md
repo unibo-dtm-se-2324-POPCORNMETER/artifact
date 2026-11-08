@@ -1,5 +1,9 @@
 # Popcorn Meter
 
+[![CI/CD](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/actions/workflows/check.yml/badge.svg)](https://github.com/unibo-dtm-se-2324-POPCORNMETER/artifact/actions/workflows/check.yml)
+
+
+
 Popcorn Meter is a desktop/web movie recommendation application with a Streamlit GUI, developed in Python for a University Software Engineering project, built using Streamlit, Poetry, OMDb integration, and the template provided by the University course.
 
 ---
